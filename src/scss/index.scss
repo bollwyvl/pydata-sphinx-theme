@@ -4,17 +4,19 @@ $container-max-widths: (
   sm: 540px,
   md: 720px,
   lg: 960px,
-  xl: 1400px
+  xl: 1400px,
 );
 
 // Include core Bootstrap
 @import '../../node_modules/bootstrap/scss/bootstrap';
+@import './variables';
 
 // Import custom fonts
 @import url('https://fonts.googleapis.com/css?family=Open+Sans:400|Lato:400');
 
 @import './base';
 @import './navbar';
+@import './admonitions';
 
 // Custom css, TODO: to be refactored in different partials
 .deprecated {
@@ -83,13 +85,15 @@ table.field-list {
   }
 }
 
-/**		
- * Styling for autosummary tables		
+/**
+ * Styling for autosummary tables
  */
 
-// The first column (with the signature) should not wrap
-td:first-child {
-  white-space: nowrap;
+.table.autosummary {
+  // The first column (with the signature) should not wrap
+  td:first-child {
+    white-space: nowrap;
+  }
 }
 
 /**
@@ -219,11 +223,15 @@ td:first-child {
 
 .bd-content {
   padding-top: 20px;
-  overflow: auto;
 
-  // make every overflowing section in main content scrollable
   .section {
-    overflow: auto;
+    max-width: 100%;
+
+    // make every overflowing elements in main content scrollable
+    table {
+      display: block;
+      overflow: auto;
+    }
   }
 }
 
