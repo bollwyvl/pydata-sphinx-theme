@@ -217,13 +217,18 @@ jobs:
       run: |
         python docs/a11y.py --no-serve
 
-    - name: Publish audit reports
+    - name: Publish Lighthouse reports
       uses: actions/upload-artifact@v2
       with:
-        name: Audit Results ${{ github.run_number }}
-        path: |
-          docs/_build/pa11y
-          /tmp/lighthouse
+        name: Lighthouse ${{ github.run_number }}
+        path: /tmp/lighthouse
+      if: always()
+
+    - name: Publish Pa11y reports
+      uses: actions/upload-artifact@v2
+      with:
+        name: Pa11y ${{ github.run_number }}
+        path: docs/_build/pa11y
       if: always()
 
     # TODO: write this someplace after a PR is merged, and load?
