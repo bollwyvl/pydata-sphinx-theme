@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: [3.9]
 
     steps:
     - uses: actions/checkout@v2
@@ -37,8 +37,9 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ${{ steps.pip-cache.outputs.dir }}
-        key: ${{ runner.os }}-pip-lint-${{ hashFiles('setup.py') }}
+        key: ${{ runner.os }}-pip-lint-${{ matrix.python-version }}-${{ hashFiles('setup.py') }}
         restore-keys: |
+          ${{ runner.os }}-pip-lint-${{ matrix.python-version }}-
           ${{ runner.os }}-pip-lint-
 
     - name: Install linting dependencies
@@ -73,7 +74,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.6, 3.7, 3.8, 3.9]
 
     steps:
     - uses: actions/checkout@v2
@@ -125,7 +126,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: [3.9]
     env:
       PORT: 8080
       # the host interface to listen on, might need to be 0.0.0.0
@@ -194,16 +195,6 @@ jobs:
         outputDirectory: /tmp/lighthouse/lighthouse-${{ github.run_number }}
         verbose: true
 
-    # TODO: write this someplace after a PR is merged, and load?
-    - name: Assess Lighthouse Check results
-      uses: foo-software/lighthouse-check-status-action@v1.0.1
-      with:
-        lighthouseCheckResults: ${{ steps.lighthouse.outputs.lighthouseCheckResults }}
-        minAccessibilityScore: "96"
-        minBestPracticesScore: "85"
-        minPerformanceScore: "10"
-        minSeoScore: "80"
-
     - name: Cache yarn
       uses: actions/cache@v1
       with:
@@ -228,6 +219,18 @@ jobs:
           docs/_build/pa11y
           /tmp/lighthouse
       if: always()
+
+    # TODO: write this someplace after a PR is merged, and load?
+    - name: Assess Lighthouse Check results
+      uses: foo-software/lighthouse-check-status-action@v1.0.1
+      with:
+        lighthouseCheckResults: ${{ steps.lighthouse.outputs.lighthouseCheckResults }}
+        minAccessibilityScore: "96"
+        minBestPracticesScore: "85"
+        minPerformanceScore: "10"
+        minSeoScore: "77"
+      if: always()
+
 
   publish:
 
