@@ -168,19 +168,16 @@ jobs:
         pip freeze
         pip check
 
-    # Build the docs
     - name: Build docs to store
       run: |
         export PATH="$HOME/miniconda/bin:$PATH"
         sphinx-build -b html docs/ docs/_build/html -W --keep-going
 
-    # Serve the docs and wait to be ready
     - name: Serve the built site
       run: |
         nohup python docs/serve.py --port=${PORT} --host=${HOST} &
         curl --retry 10 --retry-connrefused --retry-max-time 60 ${URL}/index.html
 
-    # Run the audit
     # TODO: use the hosted API with a secret? would allow for comparison over time...
     - name: Make folder for Lighthouse reports
       run: mkdir -p /tmp/lighthouse/lighthouse-${{ github.run_number }}
@@ -197,14 +194,6 @@ jobs:
         outputDirectory: /tmp/lighthouse/lighthouse-${{ github.run_number }}
         verbose: true
 
-    # Store the audit
-    - name: Upload Lighthouse Reports
-      uses: actions/upload-artifact@v2
-      with:
-        name: Lighthouse Report ${{ github.run_number }}
-        path: /tmp/lighthouse
-
-    # Check the audit for threshold values
     # TODO: write this someplace after a PR is merged, and load?
     - name: Assess Lighthouse Check results
       uses: foo-software/lighthouse-check-status-action@v1.0.1
@@ -234,8 +223,10 @@ jobs:
     - name: Publish audit reports
       uses: actions/upload-artifact@v2
       with:
-        name: Pa11y Report ${{ github.run_number }}
-        path: docs/_build/pa11y
+        name: Audit Results ${{ github.run_number }}
+        path: |
+          docs/_build/pa11y
+          /tmp/lighthouse
       if: always()
 
   publish:
