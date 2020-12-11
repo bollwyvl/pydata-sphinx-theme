@@ -1,19 +1,22 @@
 """ use pa11y-ci to generate an accessibility report
 """
 import json
+import shutil
 import subprocess
 import sys
-from pathlib import Path
-import shutil
 import time
-from urllib.request import urlopen
+from collections import defaultdict
+from pathlib import Path
 from urllib.error import URLError
+from urllib.request import urlopen
+from yaml import safe_dump
 
 HERE = Path(__file__).parent.resolve()
 ROOT = HERE.parent
 BUILD = HERE / "_build"
 PA11Y_BUILD = BUILD / "pa11y"
 PA11Y_JSON = PA11Y_BUILD / "pa11y-ci-results.json"
+PA11Y_ROADMAP = HERE / "a11y-roadmap.txt"
 YARN = [shutil.which("yarn"), "--silent"]
 SITEMAP = "http://localhost:8080/sitemap.xml"
 REPORT_INDEX_URL = (PA11Y_BUILD / "index.html").as_uri()
@@ -27,7 +30,11 @@ def clean():
 
 def serve():
     """start the local server"""
-    server = subprocess.Popen([sys.executable, HERE / "serve.py"])
+    server = subprocess.Popen(
+        [sys.executable, HERE / "serve.py"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
     ready = 0
     retries = 10
     while retries and not ready:
@@ -69,7 +76,53 @@ def report():
     )
 
 
-def main(no_serve=False):
+def summary():
+    """generate a summary and return the number of errors not ignored explicitly"""
+    report = dict(
+        HTML=REPORT_INDEX_URL, Roadmap=str(PA11Y_ROADMAP), JSON=str(PA11Y_JSON)
+    )
+
+    pa11y_json = json.loads(PA11Y_JSON.read_text())
+    pa11y_roadmap = [
+        line.split("#")[0].strip()
+        for line in PA11Y_ROADMAP.read_text().splitlines()
+        if line.strip() and not line.strip().startswith("#")
+    ]
+
+    error_codes = defaultdict(lambda: 0)
+
+    for page, results in pa11y_json["results"].items():
+        for result in results:
+            if "code" in result:
+                error_codes[result["code"]] += 1
+
+    roadmap_counts = {}
+    not_roadmap_counts = {}
+
+    for code, count in sorted(error_codes.items()):
+        code_on_roadmap = code in pa11y_roadmap
+        if code_on_roadmap:
+            roadmap_counts[code] = count
+        else:
+            not_roadmap_counts[code] = count
+
+    on_roadmap = sum(roadmap_counts.values())
+    not_roadmap = sum(not_roadmap_counts.values())
+
+    report.update(
+        {
+            "total errors": pa11y_json["errors"],
+            "on roadmap": roadmap_counts,
+            "not on roadmap": not_roadmap_counts,
+        }
+    )
+
+    print(safe_dump(report, default_flow_style=False))
+
+    return not_roadmap
+
+
+def main(no_serve=True):
     """start the server (if needed), then audit, report, and clean up"""
     clean()
     server = None
@@ -81,21 +134,9 @@ def main(no_serve=False):
     finally:
         server and server.terminate()
 
-    pa11y_json = json.loads(PA11Y_JSON.read_text())
+    error_count = summary()
 
-    print(
-        """
-    JSON:\t{json}
-    HTML:\t{html}
-    pages:\t{total}
-    passes:\t{passes}
-    errors:\t{errors}
-    """.format(
-            html=REPORT_INDEX_URL, json=PA11Y_JSON, **pa11y_json
-        )
-    )
-
-    return pa11y_json["errors"]
+    return error_count
 
 
 if __name__ == "__main__":
