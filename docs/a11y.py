@@ -7,6 +7,7 @@ from pathlib import Path
 import shutil
 import time
 from urllib.request import urlopen
+from urllib.error import URLError
 
 HERE = Path(__file__).parent.resolve()
 ROOT = HERE.parent
@@ -30,11 +31,12 @@ def serve():
     ready = 0
     retries = 10
     while retries and not ready:
+        retries -= 1
         try:
             time.sleep(1)
             ready = urlopen(SITEMAP)
-        except:
-            retries -= 1
+        except URLError:
+            pass
 
     assert ready, "server did not start in 10 seconds"
 
@@ -70,12 +72,11 @@ def report():
 def main(no_serve=False):
     """start the server (if needed), then audit, report, and clean up"""
     clean()
-    audit_rc = -1
     server = None
     try:
         if not no_serve:
             server = serve()
-        audit_rc = audit()
+        audit()
         report()
     finally:
         server and server.terminate()
